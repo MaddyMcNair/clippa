@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-11-14T13:39:01Z",
+  "environment": {
+    "python": "3.11.0",
+    "ffmpeg": "ffmpeg version 9.0.2-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+    "ffprobe": "ffprobe version 9.0.2-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers",
+    "cuda_available": true,
+    "gpu_name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "ollama_online": false,
+    "errors": [],
+    "warnings": []
+  },
+  "selected_tiers": [
+    "1"
+  ],
+  "duration_seconds": 54.67,
+  "exit_code": 0,
+  "status": "PASS"
+}

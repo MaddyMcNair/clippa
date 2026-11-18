@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLIPPA — Local AI Video Clipping & YouTube Shorts Automation</title>
+  <style>
+    :root {
+      --bg: #0b0d13;
+      --card: #141824;
+      --border: #23293d;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.25rem 1.75rem; }
+    .container { max-width: 1440px; margin: 0 auto; }
+    
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 0.75rem; }
+    .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .badge-local { background: #1e1b4b; color: #a5b4fc; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 999px; border: 1px solid #3730a3; }
+    
+    .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .queue-pill {
+      background: #181d2d; border: 1px solid var(--border); border-radius: 999px;
+      padding: 0.45rem 0.9rem; font-size: 0.82rem; font-weight: 700; color: #cbd5e1;
+      display: flex; align-items: center; gap: 0.4rem; cursor: pointer; transition: all 0.2s;
+    }
+    .queue-pill:hover { border-color: var(--accent); color: white; }
+    .queue-pill-badge { background: var(--accent); color: white; font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 999px; }
+    
+    .yt-bar {
+      display: flex; align-items: center; gap: 0.75rem; background: var(--card); border: 1px solid var(--border);
+      padding: 0.45rem 0.9rem; border-radius: 999px; font-size: 0.85rem;
+    }
+    .yt-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #64748b; }
+    .yt-status-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .btn-yt {
+      background: #dc2626; color: white; border: none; border-radius: 999px;
+      padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-yt:hover { background: #b91c1c; }
+    
+    .grid { display: grid; grid-template-columns: 540px 1fr; gap: 1.75rem; }
+    @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+    
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+    
+    /* Navigation Tabs */
+    .tabs-nav {
+      display: flex; gap: 0.35rem; background: #0c0e16; padding: 0.25rem; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 1.25rem;
+    }
+    .tab-btn {
+      flex: 1; padding: 0.6rem 0.4rem; font-size: 0.82rem; font-weight: 700; border: none; border-radius: 8px;
+      background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .tab-btn.active { background: #1e1b4b; color: #c7d2fe; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .panel-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
+    
+    .form-group { margin-bottom: 1.1rem; }
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.4rem; }
+    
+    .search-box { display: flex; gap: 0.5rem; }
+    input[type="text"], select {
+      width: 100%; background: #0c0e16; border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.7rem 0.9rem; color: var(--text); font-size: 0.9rem; outline: none; transition: border 0.2s;
+    }
+    input[type="text"]:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    
+    .template-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+    .template-opt {
+      border: 1px solid var(--border); background: #0c0e16; border-radius: 8px; padding: 0.55rem 0.2rem;
+      text-align: center; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: all 0.2s;
+    }
+    .template-opt.selected { border-color: var(--accent); background: #1e1b4b; color: #a5b4fc; }
+    
+    .auto-toggle-box {
+      background: #0f1322; border: 1px solid #2e3856; border-radius: 10px; padding: 0.85rem; margin-bottom: 1.1rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .toggle-desc { font-size: 0.85rem; font-weight: 700; color: #cbd5e1; }
+    .toggle-sub { font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem; }
+    
+    /* Toggle switch */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155; transition: .3s; border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background-color: white; transition: .3s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(20px); }
+    
+    button.btn-primary {
+      width: 100%; background: var(--accent); color: white; border: none; border-radius: 8px;
+      padding: 0.85rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s;
+      display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+    }
+    button.btn-primary:hover { background: var(--accent-hover); }
+    button.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .status-box {
+      margin-top: 1rem; padding: 0.85rem; border-radius: 8px; font-size: 0.82rem;
+      background: #0c0e16; border: 1px solid var(--border); display: none;
+    }
+    
+    /* YouTuber Video Browser Styles */
+    .youtuber-chips-bar {
+      display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.6rem; margin-bottom: 1rem;
+    }
+    .yt-chip {
+      background: #0f1322; border: 1px solid var(--border); border-radius: 999px;
+      padding: 0.35rem 0.8rem; font-size: 0.8rem; font-weight: 700; color: #cbd5e1;
+      cursor: pointer; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; transition: all 0.2s;
+    }
+    .yt-chip:hover, .yt-chip.active { background: #1e1b4b; border-color: var(--accent); color: #c7d2fe; }
+    .yt-chip-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
+    
+    .video-browser-grid {
+      display: flex; flex-direction: column; gap: 0.85rem; max-height: 520px; overflow-y: auto; padding-right: 0.25rem;
+    }
+    .yt-video-card {
+      background: #0e111a; border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      display: grid; grid-template-columns: 140px 1fr; gap: 0.85rem; padding: 0.65rem; transition: transform 0.2s, border-color 0.2s;
+    }
+    .yt-video-card:hover { border-color: #3f4762; transform: translateY(-2px); }
+    .yt-video-thumb-wrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; background: #000; cursor: pointer; }
+    .yt-video-thumb { width: 100%; height: 100%; object-fit: cover; }
+    .yt-play-overlay {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 32px; height: 32px; background: rgba(220, 38, 38, 0.9); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    }
+    .yt-video-thumb-wrap:hover .yt-play-overlay { opacity: 1; }
+    .yt-video-duration {
+      position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.8);
+      font-size: 0.65rem; font-weight: 700; color: #f8fafc; padding: 0.15rem 0.35rem; border-radius: 3px;
+    }
+    .yt-video-info { display: flex; flex-direction: column; justify-content: space-between; }
+    .yt-video-title { font-size: 0.84rem; font-weight: 700; line-height: 1.35; color: #f1f5f9; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .yt-video-actions { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .btn-queue {
+      background: #1e1b4b; color: #c7d2fe; border: 1px solid #3730a3; border-radius: 6px;
+      padding: 0.35rem 0.6rem; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-queue:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn-clip-now {
+      background: #dc2626; color: white; border: none; border-radius: 6px;
+      padding: 0.35rem 0.65rem; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-clip-now:hover { background: #b91c1c; }
+    .btn-preview-sm {
+      background: #181d2d; color: #cbd5e1; border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.35rem 0.55rem; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-preview-sm:hover { background: #334155; color: white; }
+    
+    /* Queue Panel Styles */
+    .queue-section-title { font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem; display: flex; justify-content: space-between; }
+    
+    .active-job-card {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.12));
+      border: 1px solid rgba(129, 140, 248, 0.4); border-radius: 10px; padding: 0.85rem; margin-bottom: 1.25rem;
+    }
+    .active-job-header { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; font-weight: 800; color: #818cf8; margin-bottom: 0.4rem; }
+    .active-job-title { font-size: 0.9rem; font-weight: 700; color: #f8fafc; line-height: 1.35; margin-bottom: 0.4rem; }
+    .active-job-status { font-size: 0.75rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem; }
+    
+    .queue-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 280px; overflow-y: auto; margin-bottom: 1.25rem; padding-right: 0.25rem; }
+    .queue-item {
+      display: flex; align-items: center; justify-content: space-between; background: #0e111a;
+      border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; gap: 0.75rem;
+    }
+    .queue-item-left { display: flex; align-items: center; gap: 0.65rem; flex: 1; overflow: hidden; }
+    .queue-pos-badge { font-size: 0.75rem; font-weight: 800; color: #818cf8; width: 22px; text-align: center; }
+    .queue-thumb { width: 50px; aspect-ratio: 16/9; border-radius: 4px; object-fit: cover; background: #000; }
+    .queue-meta { flex: 1; min-width: 0; }
+    .queue-item-title { font-size: 0.82rem; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-item-sub { font-size: 0.7rem; color: #94a3b8; }
+    .queue-actions { display: flex; gap: 0.25rem; }
+    .btn-queue-ctrl {
+      background: #181d2d; border: 1px solid var(--border); color: #cbd5e1; border-radius: 4px;
+      padding: 0.25rem 0.45rem; font-size: 0.7rem; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-queue-ctrl:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn-queue-ctrl.del:hover { background: #ef4444; border-color: #ef4444; }
+    
+    /* Autopilot Specific Styles */
+    .autopilot-hero {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1));
+      border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 12px; padding: 1.1rem; margin-bottom: 1.25rem;
+    }
+    .autopilot-hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .autopilot-title { font-size: 1rem; font-weight: 800; color: #e0e7ff; }
+    .autopilot-sub { font-size: 0.78rem; color: #cbd5e1; line-height: 1.4; }
+    
+    .channel-list { display: flex; flex-direction: column; gap: 0.6rem; max-height: 200px; overflow-y: auto; margin-bottom: 1.25rem; padding-right: 0.25rem; }
+    .channel-item {
+      display: flex; align-items: center; justify-content: space-between; background: #0e111a;
+      border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem;
+    }
+    .channel-info { display: flex; align-items: center; gap: 0.65rem; }
+    .channel-avatar { width: 32px; height: 32px; border-radius: 50%; background: #23293d; object-fit: cover; }
+    .channel-name { font-size: 0.85rem; font-weight: 700; color: #f1f5f9; }
+    .channel-handle { font-size: 0.75rem; color: #94a3b8; }
+    .channel-remove { background: transparent; border: none; color: #f87171; cursor: pointer; font-size: 0.75rem; padding: 0.25rem 0.45rem; border-radius: 4px; }
+    .channel-remove:hover { background: rgba(239, 68, 68, 0.15); }
+    
+    .activity-feed-box {
+      background: #090b10; border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.75rem; max-height: 180px; overflow-y: auto; font-family: monospace; font-size: 0.73rem;
+    }
+    .activity-entry { margin-bottom: 0.45rem; line-height: 1.4; color: #cbd5e1; padding-bottom: 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .activity-entry.alert { color: #38bdf8; }
+    .activity-entry.success { color: #34d399; font-weight: 700; }
+    .activity-entry.error { color: #f87171; }
+    
+    /* Clips Gallery */
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+    .clip-card {
+      background: #0e111a; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+      display: flex; flex-direction: column; transition: transform 0.2s, border 0.2s;
+    }
+    .clip-card:hover { transform: translateY(-4px); border-color: #434c67; }
+    .clip-video-wrap {
+      position: relative; width: 100%; aspect-ratio: 9/16; max-height: 380px;
+      background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .clip-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    
+    .btn-theater-expand {
+      position: absolute; bottom: 10px; right: 10px;
+      background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.25); color: #f8fafc;
+      font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.65rem; border-radius: 6px;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.3rem; z-index: 5;
+    }
+    .btn-theater-expand:hover { background: var(--accent); border-color: var(--accent); }
+    
+    .viral-badge {
+      position: absolute; top: 12px; right: 12px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
+      padding: 0.35rem 0.65rem; border-radius: 999px; font-size: 0.78rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; gap: 0.3rem; z-index: 5;
+    }
+    .score-high { color: #34d399; border-color: rgba(52, 211, 153, 0.4); }
+    .score-med { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+    .score-norm { color: #fbbf24; border-color: rgba(251, 191, 36, 0.4); }
+    
+    .clip-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .clip-title { font-size: 0.9rem; font-weight: 700; line-height: 1.35; margin-bottom: 0.55rem; color: #f1f5f9; }
+    
+    .metrics-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.65rem; }
+    .metric-chip {
+      background: #181d2d; border: 1px solid #28304a; border-radius: 6px;
+      padding: 0.18rem 0.4rem; font-size: 0.7rem; font-weight: 600; color: #cbd5e1;
+    }
+    
+    .tags-container { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem; }
+    .tag-pill { background: #1e1b4b; color: #c7d2fe; font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 4px; }
+    
+    .yt-uploaded-banner {
+      background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399;
+      padding: 0.45rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; text-align: center; margin-bottom: 0.65rem;
+    }
+    .yt-uploaded-banner a { color: #6ee7b7; text-decoration: underline; }
+    
+    .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: auto; }
+    .btn-card {
+      display: flex; justify-content: center; align-items: center; text-decoration: none;
+      padding: 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--border); transition: all 0.2s;
+    }
+    .btn-upload { background: #dc2626; color: white; border-color: #ef4444; }
+    .btn-upload:hover { background: #b91c1c; }
+    .btn-delete { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
+    .btn-delete:hover { background: #ef4444; color: white; border-color: #ef4444; }
+    
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 0.75rem; pointer-events: none;
+    }
+    .toast {
+      background: #141824; border: 1px solid #374151; border-radius: 10px;
+      padding: 0.85rem 1.25rem; font-size: 0.85rem; font-weight: 600; color: #f8fafc;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 0.75rem;
+      pointer-events: auto; animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 420px;
+    }
+    @keyframes toastIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .toast.success { border-color: #059669; background: #064e3b; color: #6ee7b7; }
+    .toast.info { border-color: #4f46e5; background: #1e1b4b; color: #c7d2fe; }
+    .toast.error { border-color: #dc2626; background: #7f1d1d; color: #fca5a5; }
+
+    /* Theater Video Modal */
+    .theater-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(10px);
+      display: none; justify-content: center; align-items: center; z-index: 2500;
+      padding: 1.5rem;
+    }
+    .theater-modal {
+      background: #141824; border: 1px solid #374151; border-radius: 16px;
+      height: 90vh; max-height: 820px; aspect-ratio: 9/16;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.9); position: relative;
+    }
+    .theater-header {
+      padding: 0.75rem 1rem; background: #0c0e16; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+    }
+    .theater-title { font-size: 0.88rem; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .theater-video-wrap {
+      flex: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
+    }
+    .theater-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    .theater-footer {
+      padding: 0.75rem 1rem; background: #0c0e16; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+    }
+
+    /* YouTube Video Preview Modal */
+    .yt-preview-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+      display: none; justify-content: center; align-items: center; z-index: 2500;
+      padding: 1.5rem;
+    }
+    .yt-preview-modal {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      width: 820px; max-width: 95vw; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+    .yt-preview-header {
+      padding: 0.75rem 1.25rem; background: #0c0e16; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+    }
+    .yt-preview-frame-wrap { width: 100%; aspect-ratio: 16/9; background: #000; }
+    .yt-preview-frame { width: 100%; height: 100%; border: none; }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      display: none; justify-content: center; align-items: center; z-index: 1000;
+    }
+    .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; width: 520px; max-width: 90vw; padding: 1.75rem; }
+    .modal-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 1rem; display: flex; justify-content: space-between; }
+    .close-btn { cursor: pointer; font-size: 1.25rem; color: var(--text-muted); }
+    
+    .spinner { border: 2px solid #374151; border-top: 2px solid white; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <span class="logo">⚡ CLIPPA</span>
+        <span class="badge-local">LOCAL WEB</span>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Live Queue Pill -->
+        <div class="queue-pill" onclick="switchTab('queue')">
+          <span>📋 Auto-Upload Queue:</span>
+          <span class="queue-pill-badge" id="queueCountBadge">0</span>
+        </div>
+
+        <!-- YouTube Account Header Badge -->
+        <div class="yt-bar" id="ytAccountBar">
+          <span class="yt-status-dot" id="ytStatusDot"></span>
+          <span id="ytAccountName">Checking YouTube connection...</span>
+          <button class="btn-yt" id="btnYtConnect" onclick="openYouTubeModal()">Connect Account</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Left Panel: Video Browser, Queue & Autopilot Navigation -->
+      <div class="panel">
+        <div class="tabs-nav">
+          <button class="tab-btn active" id="tabBrowserBtn" onclick="switchTab('browser')">📺 Browse YouTubers</button>
+          <button class="tab-btn" id="tabQueueBtn" onclick="switchTab('queue')">📋 Queue (<span id="tabQueueCount">0</span>)</button>
+          <button class="tab-btn" id="tabAutopilotBtn" onclick="switchTab('autopilot')">🤖 24/7 Autopilot</button>
+          <button class="tab-btn" id="tabManualBtn" onclick="switchTab('manual')">🎬 Single Link</button>
+        </div>
+
+        <!-- TAB 1: YouTuber Video Browser (Browse & 1-Click Queue) -->
+        <div id="tabBrowser" class="tab-content active">
+          <div class="panel-title">
+            <span>📺 YouTuber Video Browser</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Click to clip & auto-upload</span>
+          </div>
+
+          <!-- Channel Quick Chips -->
+          <div class="youtuber-chips-bar" id="channelChipsBar">
+            <div style="font-size: 0.78rem; color: var(--text-muted);">Loading watched channels...</div>
+          </div>
+
+          <!-- Channel Search / Add Bar -->
+          <div class="form-group">
+            <div class="search-box">
+              <input type="text" id="browserSearchInput" placeholder="Enter YouTuber handle (e.g. @MrBeast, @IShowSpeed)...">
+              <button class="btn-primary" style="width: auto; padding: 0 1rem; font-size: 0.85rem;" onclick="searchAndLoadChannelVideos()">Load Videos</button>
+            </div>
+          </div>
+
+          <!-- Video Cards Grid -->
+          <div class="video-browser-grid" id="channelVideosList">
+            <div style="color: var(--text-muted); font-size: 0.85rem; padding: 1.5rem 0; text-align: center;">
+              Select a YouTuber above to view their latest episodes and 1-click clip them!
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Prioritized Queue & Auto-Upload Manager -->
+        <div id="tabQueue" class="tab-content">
+          <div class="panel-title">
+            <span>📋 Auto-Upload Video Queue</span>
+            <button onclick="clearPendingQueue()" style="background: transparent; border: 1px solid var(--border); color: #f87171; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer;">Clear Queue</button>
+          </div>
+
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.4;">
+            Videos in this queue are automatically clipped into 9:16 vertical Shorts with AI face-tracking and uploaded to your YouTube channel in order.
+          </p>
+
+          <!-- Anti-Shadowban Daily Schedule Status Card -->
+          <div class="schedule-status-card" id="scheduleStatusCard" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 0.85rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-weight: 600; font-size: 0.82rem; color: #a5b4fc; display: flex; align-items: center; gap: 0.4rem;">
+                🛡️ YouTube Schedule (4/Day Anti-Shadowban)
+              </span>
+              <span id="scheduleBufferBadge" style="font-size: 0.7rem; background: rgba(99, 102, 241, 0.2); color: #c7d2fe; padding: 2px 6px; border-radius: 4px;">
+                Slots: 10AM, 2PM, 6PM, 9PM
+              </span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.76rem; color: var(--text-muted);">
+              <div style="background: rgba(15, 23, 42, 0.5); padding: 0.4rem 0.6rem; border-radius: 6px;">
+                Today's Slots: <strong id="scheduleTodayCount" style="color: #f1f5f9;">0 / 4</strong>
+              </div>
+              <div style="background: rgba(15, 23, 42, 0.5); padding: 0.4rem 0.6rem; border-radius: 6px;">
+                Tomorrow's Slots: <strong id="scheduleTomorrowCount" style="color: #f1f5f9;">0 / 4</strong>
+              </div>
+            </div>
+            <div id="scheduleNextSlot" style="margin-top: 0.5rem; font-size: 0.72rem; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
+              <span>Next release: <strong id="scheduleNextSlotTime" style="color: #38bdf8; font-weight: 500;">Calculating...</strong></span>
+              <button onclick="clearScheduleHistory()" style="background: transparent; border: none; color: #64748b; font-size: 0.68rem; cursor: pointer; text-decoration: underline;" title="Reset scheduled slot counts">Reset Slots</button>
+            </div>
+          </div>
+
+          <!-- Currently Active Job -->
+          <div id="activeJobSection" style="display: none;">
+            <div class="queue-section-title">⚡ Currently Clipping & Uploading</div>
+            <div class="active-job-card" id="activeJobCard">
+              <div class="active-job-header">
+                <span class="spinner"></span>
+                <span>PROCESSING NOW</span>
+              </div>
+              <div class="active-job-title" id="activeJobTitle">Video Title...</div>
+              <div class="active-job-status" id="activeJobMessage">Whisper transcription in progress...</div>
+            </div>
+          </div>
+
+          <!-- Upcoming Items in Queue -->
+          <div class="queue-section-title">
+            <span>⏳ Upcoming In Queue</span>
+            <span id="queueTotalCount" style="font-weight: 600; color: #818cf8;">0 items</span>
+          </div>
+
+          <div class="queue-list" id="pendingQueueList">
+            <div style="color: var(--text-muted); font-size: 0.82rem; padding: 1rem 0; text-align: center;">
+              No videos in queue. Go to <b>📺 Browse YouTubers</b> and click <b>+ Add to Queue</b>!
+            </div>
+          </div>
+
+          <!-- Recently Completed Items -->
+          <div class="queue-section-title" style="margin-top: 1rem;">
+            <span>✅ Recently Completed & Uploaded</span>
+          </div>
+          <div class="queue-list" id="completedQueueList" style="max-height: 160px;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem 0;">No completed videos yet.</div>
+          </div>
+        </div>
+
+        <!-- TAB 3: 24/7 Channel Autopilot -->
+        <div id="tabAutopilot" class="tab-content">
+          <div class="autopilot-hero">
+            <div class="autopilot-hero-top">
+              <span class="autopilot-title">⚡ 100% Hands-Free Autopilot</span>
+              <label class="switch">
+                <input type="checkbox" id="autopilotMasterToggle" onchange="toggleAutopilot(this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="autopilot-sub">
+              Continuously observes your channels. When a new video drops, CLIPPA automatically clips 9:16 Shorts with AI captions & face tracking, and immediately uploads them to YouTube without requiring approval.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Add YouTube Channel to Observe</label>
+            <div class="search-box">
+              <input type="text" id="newChannelInput" placeholder="e.g. @MrBeast, @IShowSpeed, or channel link...">
+              <button class="btn-primary" style="width: auto; padding: 0 1.25rem;" onclick="addWatchedChannel()">+ Add</button>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <label style="margin-bottom: 0;">Observed Channels</label>
+            <button onclick="checkChannelsNow()" style="background: transparent; border: 1px solid var(--border); color: #818cf8; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer;">⚡ Check Now</button>
+          </div>
+          <div class="channel-list" id="watchedChannelsList">
+            <div style="color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem 0;">No channels added yet. Add @MrBeast or @IShowSpeed above!</div>
+          </div>
+
+          <label style="margin-top: 1rem;">Autopilot Live Activity Feed</label>
+          <div class="activity-feed-box" id="activityFeedBox">
+            <div class="activity-entry">Autopilot system ready. Waiting for events...</div>
+          </div>
+        </div>
+
+        <!-- TAB 4: Manual Single Video Clipper -->
+        <div id="tabManual" class="tab-content">
+          <div class="panel-title">🎬 Create New Clips</div>
+          
+          <div class="form-group">
+            <label>YouTube Video URL or Local Video Path</label>
+            <div class="search-box">
+              <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." value="https://www.youtube.com/watch?v=jJ-zWCw85qA">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Subtitle Animation Style</label>
+            <div class="template-selector">
+              <div class="template-opt selected" data-val="default" onclick="selectTemplate('default')">Default</div>
+              <div class="template-opt" data-val="hormozi" onclick="selectTemplate('hormozi')">Hormozi</div>
+              <div class="template-opt" data-val="mrbeast" onclick="selectTemplate('mrbeast')">MrBeast</div>
+              <div class="template-opt" data-val="tiktok" onclick="selectTemplate('tiktok')">TikTok</div>
+            </div>
+          </div>
+
+          <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+              <label>Max Clips</label>
+              <select id="maxClips">
+                <option value="1">1 Clip</option>
+                <option value="2">2 Clips</option>
+                <option value="3" selected>3 Clips</option>
+                <option value="5">5 Clips</option>
+              </select>
+            </div>
+            <div>
+              <label>Max Duration</label>
+              <select id="maxDuration">
+                <option value="60">60 Seconds</option>
+                <option value="90">90 Seconds</option>
+                <option value="120" selected>120 Seconds (2m)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Automation & Auto-Upload Switch -->
+          <div class="auto-toggle-box">
+            <div>
+              <div class="toggle-desc">⚡ Auto-Upload to YouTube</div>
+              <div class="toggle-sub">Immediately publish generated viral Shorts to your channel</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="autoUploadCheck" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group" id="privacyGroup">
+            <label>Upload Privacy</label>
+            <select id="uploadPrivacy">
+              <option value="scheduled" selected>⚡ Scheduled (4/Day Anti-Shadowban)</option>
+              <option value="public">Public (Immediate)</option>
+              <option value="unlisted">Unlisted (Private review first)</option>
+              <option value="private">Private (Only you)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="nvencCheck" checked style="width: auto; cursor: pointer;">
+            <label for="nvencCheck" style="margin-bottom: 0; cursor: pointer; font-size: 0.8rem; color: #94a3b8;">
+              🚀 Enable RTX GPU NVENC Hardware Acceleration
+            </label>
+          </div>
+
+          <button class="btn-primary" id="btnSubmit" onclick="startGeneration()">
+            <span id="btnText">Generate 9:16 Clips</span>
+          </button>
+
+          <div class="status-box" id="statusBox">
+            <span id="statusText">Ready</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Output Clips Gallery -->
+      <div class="panel">
+        <div class="panel-title" style="justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <span>📱 Generated Shorts Gallery</span>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button id="btnUploadAll" onclick="uploadAllClips()" style="background: #4f46e5; border: 1px solid #6366f1; color: #ffffff; padding: 0.32rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s ease;">🚀 Upload All</button>
+            <button onclick="openFolder()" style="background: transparent; border: 1px solid var(--border); color: #a5b4fc; padding: 0.32rem 0.65rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">📂 Open Folder</button>
+            <button onclick="fetchClips()" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 0.32rem 0.65rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">Refresh</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.25rem;">
+          <input type="text" id="searchFilter" placeholder="🔍 Search clips by title or viral keywords..." oninput="filterClips()" style="padding: 0.6rem 0.9rem; font-size: 0.85rem; background: #0c0e16; border: 1px solid var(--border); border-radius: 8px; color: var(--text); width: 100%;">
+        </div>
+
+        <div class="gallery" id="clipsGallery">
+          <div style="color: var(--text-muted); font-size: 0.9rem; grid-column: 1/-1;">Loading clips...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- YouTube Connection Modal -->
+  <div class="modal-overlay" id="ytModal">
+    <div class="modal-card">
+      <div class="modal-title">
+        <span>Connect YouTube Account</span>
+        <span class="close-btn" onclick="closeYouTubeModal()">&times;</span>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;">
+        CLIPPA uses Google's official YouTube Data API v3 to upload your Shorts. Your credentials remain 100% local on your laptop in <code>~/.clippa/</code>.
+      </p>
+
+      <div class="form-group">
+        <label>Google Cloud OAuth <code>client_secrets.json</code> (Path or Paste JSON)</label>
+        <textarea id="secretsInput" rows="5" placeholder="Paste contents of client_secrets.json or file path here..." style="width: 100%; background: #0c0e16; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; color: #f8fafc; font-family: monospace; font-size: 0.8rem;"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn-primary" onclick="connectYouTube()" id="btnModalConnect">Authorize With Google</button>
+        <button onclick="disconnectYouTube()" id="btnModalDisconnect" style="display: none; background: #ef4444; color: white; border: none; border-radius: 8px; padding: 0.75rem 1rem; font-weight: 700; cursor: pointer;">Disconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Theater Video Player Modal (Full Uncropped Vertical View) -->
+  <div class="theater-overlay" id="theaterOverlay" onclick="if(event.target === this) closeTheaterModal()">
+    <div class="theater-modal">
+      <div class="theater-header">
+        <span class="theater-title" id="theaterTitle">Shorts Preview</span>
+        <span class="close-btn" onclick="closeTheaterModal()">&times;</span>
+      </div>
+      <div class="theater-video-wrap">
+        <video id="theaterVideo" class="theater-video" controls playsinline></video>
+      </div>
+      <div class="theater-footer">
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="theaterUploadBtn" class="btn-card btn-upload" style="padding: 0.45rem 0.9rem;">🚀 Upload to YouTube</button>
+          <button id="theaterDownloadBtn" class="btn-card" style="background:#1e1b4b; color:#c7d2fe; border-color:#3730a3; padding: 0.45rem 0.9rem;">⬇ Download MP4</button>
+        </div>
+        <button onclick="closeTheaterModal()" class="btn-card" style="background:transparent; color:#94a3b8; padding: 0.45rem 0.75rem;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- YouTube Video Preview Modal -->
+  <div class="yt-preview-overlay" id="ytPreviewOverlay" onclick="if(event.target === this) closeYouTubePreviewModal()">
+    <div class="yt-preview-modal">
+      <div class="yt-preview-header">
+        <span style="font-size: 0.9rem; font-weight: 700; color: #f1f5f9;" id="ytPreviewTitle">YouTube Video Preview</span>
+        <span class="close-btn" onclick="closeYouTubePreviewModal()">&times;</span>
+      </div>
+      <div class="yt-preview-frame-wrap">
+        <iframe id="ytPreviewFrame" class="yt-preview-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // Global error listener to prevent silent failures
+    window.onerror = function(msg, url, line, col, err) {
+      console.error("CLIPPA Runtime Error:", msg, "at", url, ":", line);
+      return false;
+    };
+
+    let activeTemplate = "default";
+    let pollInterval = null;
+    let backgroundRefreshInterval = null;
+    let ytConnected = false;
+    let currentBrowsingChannel = "@MrBeast";
+
+    function switchTab(tab) {
+      document.querySelectorAll(".tab-content").forEach(function(el) { el.classList.remove("active"); });
+      document.querySelectorAll(".tab-btn").forEach(function(el) { el.classList.remove("active"); });
+
+      if (tab === 'browser') {
+        document.getElementById("tabBrowser").classList.add("active");
+        document.getElementById("tabBrowserBtn").classList.add("active");
+      } else if (tab === 'queue') {
+        document.getElementById("tabQueue").classList.add("active");
+        document.getElementById("tabQueueBtn").classList.add("active");
+        loadQueueState();
+      } else if (tab === 'autopilot') {
+        document.getElementById("tabAutopilot").classList.add("active");
+        document.getElementById("tabAutopilotBtn").classList.add("active");
+      } else if (tab === 'manual') {
+        document.getElementById("tabManual").classList.add("active");
+        document.getElementById("tabManualBtn").classList.add("active");
+      }
+    }
+
+    function selectTemplate(name) {
+      activeTemplate = name;
+      document.querySelectorAll(".template-opt").forEach(function(el) {
+        el.classList.toggle("selected", el.getAttribute("data-val") === name);
+      });
+    }
+
+    async function checkYouTubeStatus() {
+      try {
+        const res = await fetch("/api/youtube/status");
+        const data = await res.json();
+        const dot = document.getElementById("ytStatusDot");
+        const name = document.getElementById("ytAccountName");
+        const btn = document.getElementById("btnYtConnect");
+        const modalDisc = document.getElementById("btnModalDisconnect");
+
+        if (data.connected) {
+          ytConnected = true;
+          dot.classList.add("connected");
+          name.innerText = "Connected: " + (data.custom_url || data.title);
+          btn.innerText = "Settings";
+          if (modalDisc) modalDisc.style.display = "block";
+        } else {
+          ytConnected = false;
+          dot.classList.remove("connected");
+          name.innerText = "YouTube Not Connected";
+          btn.innerText = "Connect Account";
+          if (modalDisc) modalDisc.style.display = "none";
+        }
+      } catch (e) {
+        console.error("YouTube status check failed:", e);
+      }
+    }
+
+    function openYouTubeModal() {
+      document.getElementById("ytModal").style.display = "flex";
+    }
+
+    function closeYouTubeModal() {
+      document.getElementById("ytModal").style.display = "none";
+    }
+
+    async function connectYouTube() {
+      const input = document.getElementById("secretsInput").value.trim();
+      const btn = document.getElementById("btnModalConnect");
+      btn.disabled = true;
+      btn.innerText = "Authorizing...";
+
+      try {
+        const payload = input.startsWith("{") ? { secrets_content: input } : { secrets_path: input };
+        const res = await fetch("/api/youtube/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("Successfully connected to YouTube!");
+          closeYouTubeModal();
+          checkYouTubeStatus();
+        } else {
+          alert("Authorization failed: " + (data.message || "Unknown error"));
+        }
+      } catch (e) {
+        alert("Error during authorization: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Authorize With Google";
+      }
+    }
+
+    async function disconnectYouTube() {
+      if (!confirm("Are you sure you want to disconnect your YouTube account?")) return;
+      try {
+        await fetch("/api/youtube/disconnect", { method: "POST" });
+        alert("Disconnected.");
+        closeYouTubeModal();
+        checkYouTubeStatus();
+        fetchClips();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // YouTuber Video Browser & Queuing
+    // -------------------------------------------------------------------------
+
+    async function loadWatchedChannels() {
+      try {
+        const res = await fetch("/api/channels");
+        const data = await res.json();
+        const chipsBar = document.getElementById("channelChipsBar");
+        const container = document.getElementById("watchedChannelsList");
+
+        if (!data.channels || data.channels.length === 0) {
+          chipsBar.innerHTML = '<div style="font-size: 0.78rem; color: var(--text-muted);">No channels saved yet. Enter a channel handle below!</div>';
+          if (container) container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem 0;">No channels observed yet. Add @MrBeast or @IShowSpeed above!</div>';
+          return;
+        }
+
+        chipsBar.innerHTML = data.channels.map(function(ch) {
+          const isAct = (ch.handle === currentBrowsingChannel || ch.id === currentBrowsingChannel);
+          const avatarUrl = ch.avatar || "https://www.youtube.com/s/desktop/d90e0c09/img/favicon_144x144.png";
+          return '<div class="yt-chip ' + (isAct ? 'active' : '') + '" onclick="selectBrowsingChannel(\'' + (ch.handle || ch.id) + '\')">' +
+            '<img class="yt-chip-avatar" src="' + avatarUrl + '" onerror="this.src=\'https://www.youtube.com/s/desktop/d90e0c09/img/favicon_144x144.png\'">' +
+            '<span>' + ch.name + '</span>' +
+          '</div>';
+        }).join("");
+
+        if (container) {
+          container.innerHTML = data.channels.map(function(ch) {
+            const avatarUrl = ch.avatar || "https://www.youtube.com/s/desktop/d90e0c09/img/favicon_144x144.png";
+            return '<div class="channel-item">' +
+              '<div class="channel-info">' +
+                '<img class="channel-avatar" src="' + avatarUrl + '" alt="' + ch.name + '" onerror="this.src=\'https://www.youtube.com/s/desktop/d90e0c09/img/favicon_144x144.png\'">' +
+                '<div>' +
+                  '<div class="channel-name">' + ch.name + '</div>' +
+                  '<div class="channel-handle">' + (ch.handle || ch.id) + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<button class="channel-remove" onclick="removeWatchedChannel(\'' + encodeURIComponent(ch.id) + '\')">Remove</button>' +
+            '</div>';
+          }).join("");
+        }
+
+        // Auto-load first channel videos if list is currently empty
+        const listEl = document.getElementById("channelVideosList");
+        if (data.channels.length > 0 && (!listEl.children || listEl.children.length <= 1)) {
+          selectBrowsingChannel(data.channels[0].handle || data.channels[0].id);
+        }
+      } catch (e) {
+        console.error("Failed to load channels:", e);
+      }
+    }
+
+    function selectBrowsingChannel(channelHandle) {
+      currentBrowsingChannel = channelHandle;
+      document.querySelectorAll(".yt-chip").forEach(function(el) { el.classList.remove("active"); });
+      loadChannelVideos(channelHandle);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showToast(msg, type) {
+      type = type || "info";
+      const container = document.getElementById("toastContainer");
+      if (!container) return;
+      const el = document.createElement("div");
+      el.className = "toast " + type;
+      const icon = (type === "success") ? "✅" : (type === "error" ? "❌" : "ℹ️");
+      el.innerHTML = "<span>" + icon + "</span><div style='flex:1; line-height:1.35;'>" + escapeHtml(msg) + "</div>";
+      container.appendChild(el);
+      setTimeout(function() {
+        el.style.opacity = "0";
+        el.style.transition = "opacity 0.3s";
+        setTimeout(function() { el.remove(); }, 300);
+      }, 3500);
+    }
+
+    window.CURRENT_CHANNEL_VIDEOS = {};
+
+    async function searchAndLoadChannelVideos() {
+      const val = document.getElementById("browserSearchInput").value.trim();
+      if (!val) return;
+      currentBrowsingChannel = val;
+      loadChannelVideos(val);
+    }
+
+    async function loadChannelVideos(channelIdentifier) {
+      const list = document.getElementById("channelVideosList");
+      list.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 1.5rem 0; text-align: center;"><span class="spinner"></span> Fetching latest videos from ' + escapeHtml(channelIdentifier) + '...</div>';
+
+      try {
+        const res = await fetch("/api/channels/" + encodeURIComponent(channelIdentifier) + "/videos?limit=12");
+        const data = await res.json();
+        if (!data.videos || data.videos.length === 0) {
+          list.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 1.5rem 0; text-align: center;">No recent videos found for this channel.</div>';
+          return;
+        }
+
+        // Cache video objects in memory
+        window.CURRENT_CHANNEL_VIDEOS = {};
+        data.videos.forEach(function(v) { window.CURRENT_CHANNEL_VIDEOS[v.id] = v; });
+
+        list.innerHTML = data.videos.map(function(v) {
+          const durationStr = formatDuration(v.duration);
+          const thumbUrl = v.thumbnail || ('https://i.ytimg.com/vi/' + v.id + '/hqdefault.jpg');
+          const cleanTitle = escapeHtml(v.title);
+
+          return '<div class="yt-video-card">' +
+            '<div class="yt-video-thumb-wrap" onclick="previewYouTubeVideo(\'' + v.id + '\')" title="Click to watch / preview video">' +
+              '<img class="yt-video-thumb" src="' + thumbUrl + '" onerror="this.src=\'https://i.ytimg.com/vi/' + v.id + '/hqdefault.jpg\'">' +
+              '<div class="yt-play-overlay">▶</div>' +
+              (durationStr ? '<span class="yt-video-duration">' + durationStr + '</span>' : '') +
+            '</div>' +
+            '<div class="yt-video-info">' +
+              '<div class="yt-video-title" onclick="previewYouTubeVideo(\'' + v.id + '\')" title="Preview: ' + cleanTitle + '">' + cleanTitle + '</div>' +
+              '<div class="yt-video-actions">' +
+                '<button class="btn-clip-now" onclick="queueVideoById(\'' + v.id + '\', true)">⚡ Clip Now</button>' +
+                '<button class="btn-queue" onclick="queueVideoById(\'' + v.id + '\', false)">➕ Add to Queue</button>' +
+                '<button class="btn-preview-sm" onclick="previewYouTubeVideo(\'' + v.id + '\')">▶ Watch</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join("");
+      } catch (e) {
+        list.innerHTML = '<div style="color: #f87171; font-size: 0.85rem; padding: 1.5rem 0; text-align: center;">Failed to load videos: ' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    function formatDuration(seconds) {
+      if (!seconds || seconds <= 0) return "";
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return mins + ":" + (secs < 10 ? "0" : "") + secs;
+    }
+
+    function previewYouTubeVideo(videoId) {
+      const v = window.CURRENT_CHANNEL_VIDEOS[videoId];
+      const title = v ? v.title : "YouTube Video Preview";
+      document.getElementById("ytPreviewTitle").innerText = title;
+      document.getElementById("ytPreviewFrame").src = "https://www.youtube-nocookie.com/embed/" + videoId + "?autoplay=1";
+      document.getElementById("ytPreviewOverlay").style.display = "flex";
+    }
+
+    function closeYouTubePreviewModal() {
+      document.getElementById("ytPreviewFrame").src = "";
+      document.getElementById("ytPreviewOverlay").style.display = "none";
+    }
+
+    async function queueVideoById(videoId, prioritizeFirst) {
+      const v = window.CURRENT_CHANNEL_VIDEOS[videoId];
+      if (!v) {
+        showToast("Error: Video information not found in cache", "error");
+        return;
+      }
+      const thumbUrl = v.thumbnail || ('https://i.ytimg.com/vi/' + v.id + '/hqdefault.jpg');
+      await queueVideo(v.id, v.title, v.url, thumbUrl, prioritizeFirst);
+    }
+
+    function queueVideoEncoded(videoId, encodedTitle, url, thumbnail, prioritizeFirst) {
+      const title = decodeURIComponent(encodedTitle);
+      queueVideo(videoId, title, url, thumbnail, prioritizeFirst);
+    }
+
+    async function queueVideo(videoId, title, url, thumbnail, prioritizeFirst) {
+      try {
+        const res = await fetch("/api/queue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            video_id: videoId,
+            title: title,
+            url: url,
+            channel: currentBrowsingChannel,
+            thumbnail: thumbnail,
+            auto_upload: true,
+            upload_privacy: "scheduled",
+            prioritize_first: prioritizeFirst
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const actionText = prioritizeFirst ? "⚡ Prioritized to clip first: " : "➕ Added to queue: ";
+          showToast(actionText + title, "success");
+          loadQueueState();
+          if (prioritizeFirst) {
+            switchTab('queue');
+          }
+        } else {
+          showToast("Failed to queue video: " + (data.detail || "Error"), "error");
+        }
+      } catch (e) {
+        showToast("Error queuing video: " + e.message, "error");
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Queue State & Controls
+    // -------------------------------------------------------------------------
+
+    async function loadScheduleState() {
+      try {
+        const res = await fetch("/api/schedule");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const todayEl = document.getElementById("scheduleTodayCount");
+        const tomorrowEl = document.getElementById("scheduleTomorrowCount");
+        const nextTimeEl = document.getElementById("scheduleNextSlotTime");
+        const bufferBadge = document.getElementById("scheduleBufferBadge");
+
+        const limit = data.daily_limit || 4;
+        const todayCount = (data.today && data.today.count !== undefined) ? data.today.count : (data.today_count || 0);
+        const tomorrowCount = (data.tomorrow && data.tomorrow.count !== undefined) ? data.tomorrow.count : (data.tomorrow_count || 0);
+
+        if (todayEl) todayEl.innerText = todayCount + " / " + limit;
+        if (tomorrowEl) tomorrowEl.innerText = tomorrowCount + " / " + limit;
+        if (nextTimeEl) {
+          if (data.next_slot && data.next_slot.local_formatted) {
+            nextTimeEl.innerText = data.next_slot.local_formatted;
+          } else {
+            nextTimeEl.innerText = "All slots open";
+          }
+        }
+        if (bufferBadge && data.slot_times) {
+          bufferBadge.innerText = "Daily: " + data.slot_times.join(", ");
+        }
+      } catch (e) {
+        console.error("Error loading schedule state:", e);
+      }
+    }
+
+    async function clearScheduleHistory() {
+      if (!confirm("Reset all scheduled upload slot tracking? Future uploads will start from the earliest available slot today.")) {
+        return;
+      }
+      try {
+        const res = await fetch("/api/schedule/clear", { method: "POST" });
+        if (res.ok) {
+          showToast("✅ Schedule history reset successfully", "info");
+          loadScheduleState();
+        } else {
+          showToast("Failed to reset schedule", "error");
+        }
+      } catch (e) {
+        showToast("Error resetting schedule: " + e.message, "error");
+      }
+    }
+
+    async function loadQueueState() {
+      try {
+        loadScheduleState();
+        const res = await fetch("/api/queue");
+        const data = await res.json();
+
+        // Update badges
+        const count = data.pending_count || 0;
+        document.getElementById("queueCountBadge").innerText = count + (data.current ? 1 : 0);
+        document.getElementById("tabQueueCount").innerText = count;
+        document.getElementById("queueTotalCount").innerText = count + " pending";
+
+        // Update active processing job card
+        const activeSection = document.getElementById("activeJobSection");
+        if (data.current) {
+          activeSection.style.display = "block";
+          document.getElementById("activeJobTitle").innerText = data.current.title;
+          document.getElementById("activeJobMessage").innerText = data.current.message || "Processing video...";
+        } else {
+          activeSection.style.display = "none";
+        }
+
+        // Update pending list
+        const pendingList = document.getElementById("pendingQueueList");
+        if (!data.pending || data.pending.length === 0) {
+          pendingList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 1rem 0; text-align: center;">No videos in queue. Go to <b>📺 Browse YouTubers</b> and click <b>+ Add to Queue</b>!</div>';
+        } else {
+          pendingList.innerHTML = data.pending.map(function(item, idx) {
+            const thumb = item.thumbnail || ("https://i.ytimg.com/vi/" + item.video_id + "/hqdefault.jpg");
+            const upBtn = (idx > 0) ? '<button class="btn-queue-ctrl" onclick="moveQueueItem(\'' + item.id + '\', \'up\')">▲</button>' : '';
+            const downBtn = (idx < data.pending.length - 1) ? '<button class="btn-queue-ctrl" onclick="moveQueueItem(\'' + item.id + '\', \'down\')">▼</button>' : '';
+            return '<div class="queue-item">' +
+              '<div class="queue-item-left">' +
+                '<span class="queue-pos-badge">#' + (idx + 1) + '</span>' +
+                '<img class="queue-thumb" src="' + thumb + '" onerror="this.src=\'https://i.ytimg.com/vi/' + item.video_id + '/hqdefault.jpg\'">' +
+                '<div class="queue-meta">' +
+                  '<div class="queue-item-title" title="' + escapeHtml(item.title) + '">' + escapeHtml(item.title) + '</div>' +
+                  '<div class="queue-item-sub">' + escapeHtml(item.channel || 'YouTube') + ' • Auto-Upload: ON</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="queue-actions">' +
+                upBtn +
+                downBtn +
+                '<button class="btn-queue-ctrl del" onclick="removeQueueItem(\'' + item.id + '\')">✕</button>' +
+              '</div>' +
+            '</div>';
+          }).join("");
+        }
+
+        // Update completed list
+        const compList = document.getElementById("completedQueueList");
+        if (!data.completed || data.completed.length === 0) {
+          compList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem 0;">No completed videos yet.</div>';
+        } else {
+          compList.innerHTML = data.completed.map(function(item) {
+            const isFailed = item.status === "failed";
+            const icon = isFailed ? "❌" : "✅";
+            let statusText = "";
+            let retryBtn = "";
+
+            if (isFailed) {
+              const errSnippet = item.error || item.message || "Failed";
+              statusText = '<span style="color:#f87171; font-weight:600;">Failed: ' + escapeHtml(errSnippet) + '</span>';
+              retryBtn = '<button class="btn-queue-ctrl" style="background:#dc2626; color:white; border:none; padding:0.25rem 0.6rem; font-weight:700;" onclick="retryQueueItem(\'' + item.id + '\')">🔄 Retry</button>';
+            } else {
+              const shortLink = (item.shorts_urls && item.shorts_urls.length > 0)
+                ? '<a href="' + item.shorts_urls[0] + '" target="_blank" style="color:#6ee7b7; font-weight:700; text-decoration:underline;">Watch Short ↗</a>'
+                : 'Uploaded to YouTube';
+              const schedInfo = item.message ? (' • <span style="color:#818cf8; font-weight:500;">' + escapeHtml(item.message) + '</span>') : '';
+              statusText = '<span style="color:#6ee7b7;">' + shortLink + '</span>' + schedInfo;
+            }
+
+            return '<div class="queue-item" style="opacity: 0.92;">' +
+              '<div class="queue-item-left">' +
+                '<span style="font-size:0.95rem;">' + icon + '</span>' +
+                '<div class="queue-meta">' +
+                  '<div class="queue-item-title">' + escapeHtml(item.title) + '</div>' +
+                  '<div class="queue-item-sub">' + statusText + '</div>' +
+                '</div>' +
+              '</div>' +
+              (retryBtn ? '<div class="queue-actions">' + retryBtn + '</div>' : '') +
+            '</div>';
+          }).join("");
+        }
+      } catch (e) {
+        console.error("Queue load error:", e);
+      }
+    }
+
+    async function retryQueueItem(itemId) {
+      try {
+        const res = await fetch("/api/queue/retry/" + encodeURIComponent(itemId), { method: "POST" });
+        if (res.ok) {
+          showToast("🔄 Re-queued video for clipping & auto-upload", "info");
+          loadQueueState();
+        } else {
+          const d = await res.json();
+          showToast("Retry failed: " + (d.detail || "Server error"), "error");
+        }
+      } catch (e) {
+        showToast("Retry error: " + e.message, "error");
+      }
+    }
+
+    async function moveQueueItem(itemId, direction) {
+      try {
+        await fetch("/api/queue/reorder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ item_id: itemId, direction: direction })
+        });
+        loadQueueState();
+      } catch (e) {
+        console.error("Error moving item:", e);
+      }
+    }
+
+    async function removeQueueItem(itemId) {
+      try {
+        await fetch("/api/queue/" + itemId, { method: "DELETE" });
+        loadQueueState();
+      } catch (e) {
+        console.error("Error removing item:", e);
+      }
+    }
+
+    async function clearPendingQueue() {
+      if (!confirm("Clear all upcoming items from queue?")) return;
+      try {
+        await fetch("/api/queue/clear", { method: "POST" });
+        loadQueueState();
+      } catch (e) {
+        console.error("Error clearing queue:", e);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Autopilot Functions
+    // -------------------------------------------------------------------------
+
+    async function addWatchedChannel() {
+      const input = document.getElementById("newChannelInput");
+      const val = input.value.trim();
+      if (!val) return;
+
+      input.disabled = true;
+      try {
+        const res = await fetch("/api/channels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channel: val })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          input.value = "";
+          loadWatchedChannels();
+          loadAutopilotStatus();
+        } else {
+          alert("Could not add channel: " + (data.detail || "Invalid channel"));
+        }
+      } catch (e) {
+        alert("Error: " + e.message);
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    async function removeWatchedChannel(chId) {
+      if (!confirm("Stop observing this channel?")) return;
+      try {
+        const res = await fetch("/api/channels/" + chId, { method: "DELETE" });
+        if (res.ok) {
+          loadWatchedChannels();
+          loadAutopilotStatus();
+        }
+      } catch (e) {
+        console.error("Failed removing channel:", e);
+      }
+    }
+
+    async function loadAutopilotStatus() {
+      try {
+        const res = await fetch("/api/autopilot/status");
+        const data = await res.json();
+        const toggle = document.getElementById("autopilotMasterToggle");
+        if (toggle && data.settings) {
+          toggle.checked = Boolean(data.settings.enabled);
+        }
+
+        const feedBox = document.getElementById("activityFeedBox");
+        if (feedBox && data.activity) {
+          if (data.activity.length === 0) {
+            feedBox.innerHTML = '<div class="activity-entry">Autopilot active. Monitoring watched channels...</div>';
+          } else {
+            feedBox.innerHTML = data.activity.map(function(a) {
+              const d = new Date(a.timestamp * 1000);
+              const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              const lvlClass = a.level || "info";
+              return '<div class="activity-entry ' + lvlClass + '">[' + timeStr + '] ' + a.message + '</div>';
+            }).join("");
+          }
+        }
+      } catch (e) {
+        console.error("Autopilot status error:", e);
+      }
+    }
+
+    async function toggleAutopilot(enabled) {
+      if (enabled && !ytConnected) {
+        if (!confirm("Autopilot will automatically upload new clips, but your YouTube account is not yet connected. Turn on Autopilot anyway?")) {
+          document.getElementById("autopilotMasterToggle").checked = false;
+          openYouTubeModal();
+          return;
+        }
+      }
+
+      try {
+        await fetch("/api/autopilot/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: enabled })
+        });
+        loadAutopilotStatus();
+      } catch (e) {
+        alert("Error toggling autopilot: " + e.message);
+      }
+    }
+
+    async function checkChannelsNow() {
+      try {
+        const res = await fetch("/api/autopilot/check-now", { method: "POST" });
+        if (res.ok) {
+          loadAutopilotStatus();
+        }
+      } catch (e) {
+        console.error("Error triggering check-now:", e);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Clips Gallery & Full Theater Player
+    // -------------------------------------------------------------------------
+
+    window.CURRENT_CLIPS_CACHE = {};
+    let isUploadingAll = false;
+
+    async function fetchClips() {
+      try {
+        const res = await fetch("/api/clips");
+        const data = await res.json();
+        const gallery = document.getElementById("clipsGallery");
+        const uploadAllBtn = document.getElementById("btnUploadAll");
+
+        if (!data.clips || data.clips.length === 0) {
+          gallery.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; grid-column: 1/-1;">No clips generated yet. Paste a link or queue a video to start!</div>';
+          if (uploadAllBtn) uploadAllBtn.style.display = "none";
+          return;
+        }
+
+        window.CURRENT_CLIPS_CACHE = {};
+        data.clips.forEach(function(c) { window.CURRENT_CLIPS_CACHE[c.filename] = c; });
+
+        if (uploadAllBtn && !isUploadingAll) {
+          const pending = data.clips.filter(function(c) {
+            return !(c.youtube && c.youtube.uploaded);
+          });
+          uploadAllBtn.style.display = "inline-flex";
+          if (pending.length > 0) {
+            uploadAllBtn.innerText = "🚀 Upload All (" + pending.length + ")";
+            uploadAllBtn.style.background = "#4f46e5";
+            uploadAllBtn.style.borderColor = "#6366f1";
+            uploadAllBtn.style.color = "#ffffff";
+          } else {
+            uploadAllBtn.innerText = "✅ All Uploaded";
+            uploadAllBtn.style.background = "#1e293b";
+            uploadAllBtn.style.borderColor = "var(--border)";
+            uploadAllBtn.style.color = "var(--text-muted)";
+          }
+        }
+
+        gallery.innerHTML = data.clips.map(function(c) {
+          const scoreClass = c.viral_score >= 80 ? "score-high" : (c.viral_score >= 60 ? "score-med" : "score-norm");
+          const isScheduled = c.youtube && c.youtube.uploaded && c.youtube.scheduled;
+          let ytBanner = "";
+          if (c.youtube && c.youtube.uploaded) {
+            if (isScheduled && (c.youtube.publish_at_local || c.youtube.publish_at)) {
+              const displayTime = c.youtube.publish_at_local || c.youtube.publish_at;
+              ytBanner = '<div class="yt-uploaded-banner" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.35); color: #c7d2fe;">📅 Scheduled for ' + escapeHtml(displayTime) + ' (<a href="' + c.youtube.url + '" target="_blank" style="color:#818cf8;">Watch Short ↗</a>)</div>';
+            } else {
+              ytBanner = '<div class="yt-uploaded-banner">✅ Published to YouTube: <a href="' + c.youtube.url + '" target="_blank">Watch Short ↗</a></div>';
+            }
+          } else if (c.youtube && c.youtube.error) {
+            const isLimit = c.youtube.error.indexOf("uploadLimitExceeded") !== -1;
+            const errLabel = isLimit
+              ? "⚠️ YouTube daily upload limit reached (~10/24h). Verify at youtube.com/verify or wait 24h."
+              : "⚠️ Upload failed: " + escapeHtml(c.youtube.error.substring(0, 75));
+            ytBanner = '<div class="yt-uploaded-banner" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 0.72rem;">' + errLabel + '</div>';
+          }
+
+          const safeFilename = escapeHtml(c.filename);
+          const cleanTitle = escapeHtml(c.title);
+
+          const actionBtn = (c.youtube && c.youtube.uploaded)
+            ? ('<a href="' + c.youtube.url + '" target="_blank" class="btn-card" style="background:#1e1b4b; color:#a5b4fc; border-color:#3730a3;">▶ View Short</a>')
+            : ('<button onclick="uploadClipByFilename(\'' + safeFilename + '\')" class="btn-card btn-upload">🚀 Upload</button>');
+
+          const tagsHtml = (c.hashtags || []).map(function(t) { return '<span class="tag-pill">' + escapeHtml(t) + '</span>'; }).join("");
+
+          return '<div class="clip-card" data-title="' + c.title.toLowerCase() + '">' +
+            '<div class="clip-video-wrap">' +
+              '<video class="clip-video" controls preload="metadata" playsinline>' +
+                '<source src="' + c.url + '" type="video/mp4">' +
+              '</video>' +
+              '<div class="viral-badge ' + scoreClass + '">🔥 ' + c.viral_score + '% Viral Score</div>' +
+              '<button class="btn-theater-expand" onclick="openTheaterModal(\'' + safeFilename + '\')" title="Expand to Full Height View">🔍 Watch Full</button>' +
+            '</div>' +
+            '<div class="clip-body">' +
+              '<div>' +
+                '<div class="clip-title" title="' + cleanTitle + '">' + cleanTitle + '</div>' +
+                '<div class="metrics-chips">' +
+                  '<span class="metric-chip">Hook: ' + c.subscores.hook + '/25</span>' +
+                  '<span class="metric-chip">Engage: ' + c.subscores.engagement + '/25</span>' +
+                  '<span class="metric-chip">Value: ' + c.subscores.value + '/25</span>' +
+                  '<span class="metric-chip">Share: ' + c.subscores.shareability + '/25</span>' +
+                '</div>' +
+                '<div class="tags-container">' + tagsHtml + '</div>' +
+                ytBanner +
+              '</div>' +
+              '<div class="card-actions">' +
+                actionBtn +
+                '<button onclick="deleteClip(\'' + safeFilename + '\')" class="btn-card btn-delete">🗑 Delete</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join("");
+        filterClips();
+      } catch (e) {
+        console.error("Failed to load clips:", e);
+      }
+    }
+
+    function openTheaterModal(filename) {
+      const c = window.CURRENT_CLIPS_CACHE[filename];
+      if (!c) return;
+      document.getElementById("theaterTitle").innerText = c.title;
+      const vid = document.getElementById("theaterVideo");
+      vid.src = c.url;
+      vid.play().catch(function(){});
+
+      const uploadBtn = document.getElementById("theaterUploadBtn");
+      if (c.youtube && c.youtube.uploaded) {
+        uploadBtn.innerText = "▶ View on YouTube ↗";
+        uploadBtn.onclick = function() { window.open(c.youtube.url, "_blank"); };
+      } else {
+        uploadBtn.innerText = "🚀 Upload to YouTube";
+        uploadBtn.onclick = function() { uploadClipByFilename(c.filename); };
+      }
+
+      const downloadBtn = document.getElementById("theaterDownloadBtn");
+      downloadBtn.onclick = function() {
+        const a = document.createElement("a");
+        a.href = c.url;
+        a.download = c.filename;
+        a.click();
+      };
+
+      document.getElementById("theaterOverlay").style.display = "flex";
+    }
+
+    function closeTheaterModal() {
+      const vid = document.getElementById("theaterVideo");
+      vid.pause();
+      vid.src = "";
+      document.getElementById("theaterOverlay").style.display = "none";
+    }
+
+    function uploadClipByFilename(filename) {
+      const c = window.CURRENT_CLIPS_CACHE[filename];
+      const title = c ? (c.youtube_title || c.title) : filename;
+      uploadClip(filename, title);
+    }
+
+    function uploadClipEncoded(filename, encodedTitle) {
+      const title = decodeURIComponent(encodedTitle);
+      uploadClip(filename, title);
+    }
+
+    async function uploadClip(filename, title) {
+      if (!ytConnected) {
+        showToast("Please connect your YouTube account first using the top bar.", "info");
+        openYouTubeModal();
+        return;
+      }
+      if (!confirm('Upload "' + title + '" to your YouTube channel as a Short (Auto-scheduled to prevent shadowbans)?')) return;
+
+      const privacy = "scheduled";
+      showToast("🚀 Scheduling YouTube upload for: " + title, "info");
+
+      try {
+        const res = await fetch("/api/youtube/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: filename, title: title, privacy: privacy })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const msg = data.scheduled
+            ? "📅 Scheduled for release on YouTube: " + (data.publish_at_local || data.publish_at)
+            : "✅ Successfully uploaded to YouTube as Short!";
+          showToast(msg, "success");
+          fetchClips();
+          loadScheduleState();
+        } else {
+          showToast("Upload failed: " + (data.detail || "Unknown error"), "error");
+        }
+      } catch (e) {
+        showToast("Upload error: " + e.message, "error");
+      }
+    }
+
+    async function uploadAllClips() {
+      if (isUploadingAll) return;
+
+      if (!ytConnected) {
+        showToast("Please connect your YouTube account first using the top bar.", "info");
+        openYouTubeModal();
+        return;
+      }
+
+      const allClips = Object.values(window.CURRENT_CLIPS_CACHE || {});
+      const pendingClips = allClips.filter(function(c) {
+        return !(c.youtube && c.youtube.uploaded);
+      });
+
+      if (pendingClips.length === 0) {
+        showToast("All clips in the gallery are already published to YouTube!", "info");
+        return;
+      }
+
+      if (!confirm('Schedule ' + pendingClips.length + ' pending Short(s) to your YouTube channel (anti-shadowban: max 4/day)?')) {
+        return;
+      }
+
+      isUploadingAll = true;
+      const btn = document.getElementById("btnUploadAll");
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = "0.75";
+        btn.style.cursor = "not-allowed";
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      showToast("🚀 Starting scheduled uploads of " + pendingClips.length + " pending Shorts...", "info");
+
+      for (let i = 0; i < pendingClips.length; i++) {
+        const c = pendingClips[i];
+        const clipTitle = c.youtube_title || c.title || c.filename;
+        if (btn) {
+          btn.innerText = "⏳ Scheduling (" + (i + 1) + "/" + pendingClips.length + ")...";
+        }
+        showToast("Scheduling (" + (i + 1) + "/" + pendingClips.length + "): " + clipTitle, "info");
+
+        try {
+          const res = await fetch("/api/youtube/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              filename: c.filename,
+              title: clipTitle,
+              privacy: "scheduled"
+            })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            successCount++;
+            const schedTime = data.publish_at_local ? (" for " + data.publish_at_local) : "";
+            showToast("✅ Scheduled (" + (i + 1) + "/" + pendingClips.length + ")" + schedTime + ": " + clipTitle, "success");
+            if (window.CURRENT_CLIPS_CACHE[c.filename]) {
+              window.CURRENT_CLIPS_CACHE[c.filename].youtube = data.youtube || { uploaded: true, url: data.url, scheduled: data.scheduled, publish_at_local: data.publish_at_local };
+            }
+          } else {
+            failCount++;
+            showToast("❌ Failed (" + (i + 1) + "/" + pendingClips.length + "): " + (data.detail || "Upload error"), "error");
+          }
+        } catch (err) {
+          failCount++;
+          showToast("❌ Upload error: " + err.message, "error");
+        }
+      }
+
+      isUploadingAll = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.style.cursor = "pointer";
+      }
+
+      await fetchClips();
+      loadScheduleState();
+      if (failCount === 0) {
+        showToast("🎉 Successfully scheduled all " + successCount + " Shorts to YouTube!", "success");
+      } else {
+        showToast("Batch scheduling complete: " + successCount + " scheduled, " + failCount + " failed.", failCount > 0 ? "error" : "success");
+      }
+    }
+
+    async function openFolder() {
+      try {
+        await fetch("/api/open-outputs", { method: "POST" });
+      } catch (e) {
+        console.error("Failed to open folder:", e);
+      }
+    }
+
+    async function deleteClip(filename) {
+      if (!confirm('Are you sure you want to delete "' + filename + '"?')) return;
+      try {
+        const res = await fetch("/api/clips/" + encodeURIComponent(filename), { method: "DELETE" });
+        if (res.ok) {
+          fetchClips();
+        } else {
+          const err = await res.json();
+          alert("Delete failed: " + (err.detail || res.statusText));
+        }
+      } catch (e) {
+        alert("Delete failed: " + e.message);
+      }
+    }
+
+    function filterClips() {
+      const input = document.getElementById("searchFilter");
+      if (!input) return;
+      const q = input.value.toLowerCase().trim();
+      document.querySelectorAll(".clip-card").forEach(function(card) {
+        const title = card.getAttribute("data-title") || "";
+        card.style.display = title.includes(q) ? "flex" : "none";
+      });
+    }
+
+    async function startGeneration() {
+      const url = document.getElementById("urlInput").value.trim();
+      if (!url) return alert("Please enter a YouTube URL or local file path.");
+
+      const autoUp = document.getElementById("autoUploadCheck").checked;
+      if (autoUp && !ytConnected) {
+        if (!confirm("Auto-Upload is ON, but YouTube is not yet connected. Continue clipping without auto-upload?")) {
+          openYouTubeModal();
+          return;
+        }
+      }
+
+      const btn = document.getElementById("btnSubmit");
+      const btnText = document.getElementById("btnText");
+      const statusBox = document.getElementById("statusBox");
+      const statusText = document.getElementById("statusText");
+
+      btn.disabled = true;
+      btnText.innerHTML = '<span class="spinner"></span> Processing...';
+      statusBox.style.display = "block";
+      statusText.innerText = "Ingesting video and queuing pipeline...";
+
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: url,
+            template: activeTemplate,
+            max_clips: parseInt(document.getElementById("maxClips").value),
+            max_duration: parseInt(document.getElementById("maxDuration").value),
+            nvenc: document.getElementById("nvencCheck").checked,
+            auto_upload: autoUp,
+            upload_privacy: document.getElementById("uploadPrivacy").value,
+          })
+        });
+        const data = await res.json();
+        if (data.job_id) {
+          trackJob(data.job_id);
+        } else {
+          throw new Error(data.detail || "Failed to start job");
+        }
+      } catch (e) {
+        alert("Error starting pipeline: " + e.message);
+        btn.disabled = false;
+        btnText.innerText = "Generate 9:16 Clips";
+        statusBox.style.display = "none";
+      }
+    }
+
+    function trackJob(jobId) {
+      const statusText = document.getElementById("statusText");
+      const btn = document.getElementById("btnSubmit");
+      const btnText = document.getElementById("btnText");
+
+      if (pollInterval) clearInterval(pollInterval);
+
+      pollInterval = setInterval(async function() {
+        try {
+          const res = await fetch("/api/jobs/" + jobId);
+          const job = await res.json();
+          statusText.innerText = "[" + job.status.toUpperCase() + "] " + job.message;
+
+          if (job.status === "completed" || job.status === "failed") {
+            clearInterval(pollInterval);
+            btn.disabled = false;
+            btnText.innerText = "Generate 9:16 Clips";
+            fetchClips();
+          }
+        } catch (e) {
+          console.error("Polling error:", e);
+        }
+      }, 3000);
+    }
+
+    // Initial load
+    checkYouTubeStatus();
+    loadWatchedChannels();
+    loadQueueState();
+    loadAutopilotStatus();
+    fetchClips();
+
+    // Regular background status refresh
+    backgroundRefreshInterval = setInterval(function() {
+      loadQueueState();
+      loadAutopilotStatus();
+      fetchClips();
+    }, 4000);
+  </script>
+</body>
+</html>
